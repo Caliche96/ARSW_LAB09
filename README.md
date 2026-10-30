@@ -1,6 +1,8 @@
 ### Escuela Colombiana de Ingeniería
 ### Arquitecturas de Software - ARSW
 
+**Autores:** Juan Daniel Bogotá, <NOMBRE DE KALICHE>
+
 ## Escalamiento en Azure con Maquinas Virtuales, Sacale Sets y Service Plans
 
 ### Dependencias
@@ -122,6 +124,46 @@ Antes de continuar puede eliminar el grupo de recursos anterior para evitar gast
 5. Cree una *Virtual Network* dentro del grupo de recursos, guiese con la siguiente imágen.
 
 ![](images/part2/part2-vn-create.png)
+
+#### Solución - Crear el Balanceador de Carga
+
+Esta parte se hizo desde el portal de Azure, siguiendo las imágenes del enunciado. El portal de hoy no es igual al de 2019, así que donde hubo diferencias las dejamos anotadas.
+
+**Región.** El enunciado usa North Europe, pero la suscripción de estudiante tiene una política que bloquea esa región. Al consultar la política salieron las únicas regiones permitidas: centralus, brazilsouth, mexicocentral, eastus2 y chilecentral. Se escogió East US 2, que tiene zonas de disponibilidad, y todos los recursos de esta parte quedaron ahí. El grupo de recursos SCALABILITY_LAB quedó en North Europe, lo cual no afecta porque los recursos pueden estar en otra región.
+
+**1. Balanceador de carga.** Se creó SCALABILITY_LAB_LOAD_BALANCER, público, SKU Estándar y nivel Regional. En el portal actual la IP pública no se crea aparte: se crea dentro del paso "Configuración de IP de front-end". Allí se dejó una configuración llamada LoadBalancerFrontEnd con una IP nueva, SCALABILITY_LAB_LOAD_BALANCER_IP, estática y con redundancia de zona. La IP pública quedó en 132.196.198.201.
+
+![alt text](images/part2/solucion/02-lb-basicos.png)
+
+![alt text](images/part2/solucion/03-lb-ip-frontend.png)
+
+![alt text](images/part2/solucion/04-lb-creado.png)
+
+
+**2. Backend Pool.** Se creó SCALABILITY_LAB_BACKEND_POOL. Por ahora está vacío (0 máquinas) y se dejó sin red virtual, porque la red todavía no existía en ese momento. Las máquinas se agregarán cuando se creen en el siguiente paso.
+
+![alt text](images/part2/solucion/05-backend-pool.png)
+
+**3. Health Probe.** Se creó SCALABILITY_LAB_HEALTH_PROBE con protocolo TCP, puerto 3000 e intervalo de 5 segundos. Esto hace que el balanceador pregunte cada 5 segundos si el puerto 3000 de cada máquina responde, y deje de mandarle tráfico a la que no conteste.
+
+En cuanto a la diferencia con el enunciado, la imagen del enunciado muestra un campo "Unhealthy threshold = 2", pero el portal actual ya no lo pide.
+
+![alt text](images/part2/solucion/06-health-probe.png)
+
+![alt text](images/part2/solucion/06_1-health-probe.png)
+
+**4. Load Balancing Rule.** Se creó SCALABILITY_LAB_LOAD_BALANCING_RULE, las peticiones que llegan al puerto 80 de la IP del balanceador se reparten entre las máquinas del pool por el puerto 3000, usando el Health Probe anterior. La persistencia de sesión quedó en ninguna, así que cada petición puede ir a una máquina distinta. El resto de opciones se dejó por defecto.
+
+![Load Balancing Rule](images/part2/solucion/08-lb-rule.png)
+
+**5. Virtual Network.** Se creó SCALABILITY_LAB_VIRTUAL_NETWORK con el espacio de direcciones 10.1.0.0/16 y una subred SCALABILITY_LAB_SUBNET de 10.1.0.0/24. Es la red privada donde van a vivir las tres máquinas.
+
+![alt text](images/part2/solucion/09-vnet-basicos.png)
+
+![alt text](images/part2/solucion/10-vnet-subred.png)
+
+![alt text](images/part2/solucion/11-vnet-creada.png)
+
 
 #### Crear las maquinas virtuales (Nodos)
 
