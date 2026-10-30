@@ -287,44 +287,53 @@ Antes de continuar puede eliminar el grupo de recursos anterior para evitar gast
 
 ![](images/part2/part2-vn-create.png)
 
-#### Solución - Crear el Balanceador de Carga
+#### Solución del Balanceador de Carga
 
 Esta parte se hizo desde el portal de Azure, siguiendo las imágenes del enunciado. El portal de hoy no es igual al de 2019, así que donde hubo diferencias las dejamos anotadas.
 
-**Región.** Chile Central. North Europe está bloqueada por una política de la suscripción de estudiante. Las regiones permitidas son centralus, brazilsouth, mexicocentral, eastus2 y chilecentral, y en todas el límite es de 6 vCPU por región. En East US 2 la cuota de la familia Dsv7 era 0 y los tamaños de 1 vCPU no estaban disponibles, en Brasil Sur y México pasaba lo mismo con los de 1 vCPU. En Chile Central sí hay una VM de 1 vCPU disponible en las 3 zonas, y con ella caben las 4 máquinas que pide el laboratorio.
+Región. Se usó Chile Central en lugar de North Europe. North Europe está bloqueada por una política de la suscripción de estudiante y las regiones permitidas son centralus, brazilsouth, mexicocentral, eastus2 y chilecentral. En todas el límite es de 6 vCPU por región. En East US 2 la cuota de la familia Dsv7 era 0 y los tamaños de 1 vCPU no estaban disponibles. En Brasil Sur y en México pasaba lo mismo con los de 1 vCPU. Se pidió subir la cuota total de vCPU y la solicitud fue rechazada. En Chile Central sí hay una máquina de 1 vCPU disponible en las 3 zonas, y con ella caben las 4 máquinas que pide el laboratorio.
 
-**1. Balanceador de carga.** Se creó SCALABILITY_LAB_LOAD_BALANCER, público, SKU Estándar y nivel Regional. En el portal actual la IP pública no se crea aparte: se crea dentro del paso "Configuración de IP de front-end". Allí se dejó una configuración llamada LoadBalancerFrontEnd con una IP nueva, SCALABILITY_LAB_LOAD_BALANCER_IP, estática y con redundancia de zona. La IP pública quedó en 132.196.198.201.
+![Error de cuota en East US 2](images/part2/solucion/region_eastus2_cuota_dsv7.png)
 
-![alt text](images/part2/solucion/02-lb-basicos.png)
+![Tamaños de 1 vCPU no disponibles en East US 2](images/part2/solucion/region_eastus2_sin_1vcpu.png)
 
-![alt text](images/part2/solucion/03-lb-ip-frontend.png)
+![Tamaños de 1 vCPU no disponibles en Brasil Sur](images/part2/solucion/region_brasil_sin_1vcpu.png)
 
-![alt text](images/part2/solucion/04-lb-creado.png)
+![Solicitud de aumento de cuota rechazada](images/part2/solucion/cuota_aumento_rechazada.png)
 
+![Tamaño de 1 vCPU disponible en Chile Central](images/part2/solucion/region_chile_ds1v2.png)
 
-**2. Backend Pool.** Se creó SCALABILITY_LAB_BACKEND_POOL. Por ahora está vacío (0 máquinas) y se dejó sin red virtual, porque la red todavía no existía en ese momento. Las máquinas se agregarán cuando se creen en el siguiente paso.
+Punto 1, balanceador de carga. Se creó SCALABILITY_LAB_LOAD_BALANCER, público, SKU Estándar y nivel Regional. En el portal actual la IP pública no se crea aparte, se crea dentro del paso Configuración de IP de frontend. Allí se dejó una configuración llamada LoadBalancerFrontEnd con una IP nueva, SCALABILITY_LAB_LOAD_BALANCER_IP, estática y con redundancia de zona. La IP pública quedó en 57.156.38.94.
 
-![alt text](images/part2/solucion/05-backend-pool.png)
+![Datos básicos del balanceador](images/part2/solucion/02-lb-basicos.png)
 
-**3. Health Probe.** Se creó SCALABILITY_LAB_HEALTH_PROBE con protocolo TCP, puerto 3000 e intervalo de 5 segundos. Esto hace que el balanceador pregunte cada 5 segundos si el puerto 3000 de cada máquina responde, y deje de mandarle tráfico a la que no conteste.
+![Configuración de IP de frontend](images/part2/solucion/03-lb-ip-frontend.png)
 
-En cuanto a la diferencia con el enunciado, la imagen del enunciado muestra un campo "Unhealthy threshold = 2", pero el portal actual ya no lo pide.
+![Balanceador creado](images/part2/solucion/04-lb-creado.png)
 
-![alt text](images/part2/solucion/06-health-probe.png)
+Punto 2, Backend Pool. Se creó SCALABILITY_LAB_BACKEND_POOL y se asoció a la red virtual SCALABILITY_LAB_VIRTUAL_NETWORK. Al principio está vacío y las máquinas se agregan cuando se crean, en el siguiente paso.
 
-![alt text](images/part2/solucion/06_1-health-probe.png)
+![Backend Pool](images/part2/solucion/05-backend-pool.png)
 
-**4. Load Balancing Rule.** Se creó SCALABILITY_LAB_LOAD_BALANCING_RULE, las peticiones que llegan al puerto 80 de la IP del balanceador se reparten entre las máquinas del pool por el puerto 3000, usando el Health Probe anterior. La persistencia de sesión quedó en ninguna, así que cada petición puede ir a una máquina distinta. El resto de opciones se dejó por defecto.
+Punto 3, Health Probe. Se creó SCALABILITY_LAB_HEALTH_PROBE con protocolo TCP, puerto 3000 e intervalo de 5 segundos. Esto hace que el balanceador pregunte cada 5 segundos si el puerto 3000 de cada máquina responde, y deje de mandarle tráfico a la que no conteste.
+
+En cuanto a la diferencia con el enunciado, la imagen del enunciado muestra un campo Unhealthy threshold con valor 2, pero el portal actual ya no lo pide. Para saber con qué valor quedó se consultó el sondeo con la línea de comandos de Azure y el umbral es 1, es decir que una máquina se marca como caída con un solo fallo del sondeo.
+
+![Health Probe](images/part2/solucion/06-health-probe.png)
+
+![Health Probe en la lista](images/part2/solucion/06_1-health-probe.png)
+
+Punto 4, Load Balancing Rule. Se creó SCALABILITY_LAB_LOAD_BALANCING_RULE. Las peticiones que llegan al puerto 80 de la IP del balanceador se reparten entre las máquinas del pool por el puerto 3000, usando el Health Probe anterior. La persistencia de sesión quedó en ninguna, así que cada petición puede ir a una máquina distinta. El resto de opciones se dejó por defecto.
 
 ![Load Balancing Rule](images/part2/solucion/08-lb-rule.png)
 
-**5. Virtual Network.** Se creó SCALABILITY_LAB_VIRTUAL_NETWORK con el espacio de direcciones 10.1.0.0/16 y una subred SCALABILITY_LAB_SUBNET de 10.1.0.0/24. Es la red privada donde van a vivir las tres máquinas.
+Punto 5, Virtual Network. Se creó SCALABILITY_LAB_VIRTUAL_NETWORK con el espacio de direcciones 10.1.0.0/16 y una subred SCALABILITY_LAB_SUBNET de 10.1.0.0/24. Es la red privada donde van a vivir las cuatro máquinas.
 
-![alt text](images/part2/solucion/09-vnet-basicos.png)
+![Datos básicos de la red virtual](images/part2/solucion/09-vnet-basicos.png)
 
-![alt text](images/part2/solucion/10-vnet-subred.png)
+![Subred](images/part2/solucion/10-vnet-subred.png)
 
-![alt text](images/part2/solucion/11-vnet-creada.png)
+![Red virtual creada](images/part2/solucion/11-vnet-creada.png)
 
 
 #### Crear las maquinas virtuales (Nodos)
@@ -365,6 +374,69 @@ forever start FibonacciApp.js
 
 Realice este proceso para las 3 VMs, por ahora lo haremos a mano una por una, sin embargo es importante que usted sepa que existen herramientas para aumatizar este proceso, entre ellas encontramos Azure Resource Manager, OsDisk Images, Terraform con Vagrant y Paker, Puppet, Ansible entre otras.
 
+#### Solución de las maquinas virtuales (Nodos)
+
+Se crearon cuatro máquinas virtuales en Chile Central. VM1 quedó en la zona 1, VM2 en la zona 2, VM3 en la zona 3 y VM4 se creó después, como cuarta máquina para la prueba final. Todas usan Ubuntu Server 24.04 LTS, el usuario azureuser y la misma clave SSH, que se generó al crear VM1 con el nombre VM1_key y se reutilizó en las demás.
+
+Tamaño de las máquinas. El tamaño es Standard DS1_v2, con 1 vCPU y 3,5 GiB de memoria, que cuesta 0,134 USD por hora según el resumen del portal. No es un tamaño barato, pero fue el único de 1 vCPU que la suscripción dejó usar en las 3 zonas de Chile Central. Se necesitaba 1 vCPU porque la suscripción solo permite 6 vCPU por región y la familia DSv2 permite 4, que son justo las 4 máquinas. Con tamaños de 2 vCPU solo habrían cabido 3.
+
+![Datos básicos de VM1](images/part2/solucion/vm1_datos_basicos.png)
+
+![Tamaño DS1_v2 y autenticación de VM1](images/part2/solucion/vm1_tamano_ds1v2.png)
+
+![Clave SSH de VM1](images/part2/solucion/vm1_clave_ssh.png)
+
+Redes. Cada máquina se conectó a la red virtual SCALABILITY_LAB_VIRTUAL_NETWORK y a la subred SCALABILITY_LAB_SUBNET. Con VM1 se creó el grupo de seguridad de red SCALABILITY_LAB_NETWORK_SECURITY_GROUP, con una regla para SSH por el puerto 22 y otra llamada Port_3000 para el puerto 3000. VM2, VM3 y VM4 usaron ese mismo grupo. Las cuatro se agregaron al Backend Pool del balanceador.
+
+![Grupo de seguridad de red con los puertos 22 y 3000](images/part2/solucion/vm1_nsg.png)
+
+![Redes de VM1](images/part2/solucion/vm1_redes.png)
+
+![VM1 detrás del balanceador](images/part2/solucion/vm1_balanceador.png)
+
+![Resumen de VM1](images/part2/solucion/vm1_resumen.png)
+
+VM2 se creó igual que VM1, cambiando el nombre, la zona a 2 y la clave, que esta vez fue la ya guardada en Azure.
+
+![Datos básicos de VM2](images/part2/solucion/vm2_datos_basicos.png)
+
+![Resumen de VM2](images/part2/solucion/vm2_resumen.png)
+
+![Redes de VM2](images/part2/solucion/vm2_redes_resumen.png)
+
+![VM2 creada](images/part2/solucion/vm2_creada.png)
+
+Límite de IPs públicas. VM1 y VM2 se crearon con una IP pública cada una, como pide el enunciado. Al crear VM3 el portal dio error porque la suscripción solo permite 3 direcciones IP públicas y ya estaban usadas por el balanceador, VM1 y VM2.
+
+![Error por el límite de IPs públicas](images/part2/solucion/vm3_error_cuota_ip.png)
+
+Por eso VM3 se creó sin IP pública.
+
+![VM3 creada](images/part2/solucion/vm3_creada.png)
+
+Después se quitó la IP pública de VM1 y de VM2 y se borraron las dos direcciones, para que las cuatro máquinas quedaran iguales y privadas. Así el único punto de entrada es la IP del balanceador, 57.156.38.94, y las máquinas no quedan expuestas directamente a internet.
+
+Regla de salida. Una máquina sin IP pública no tiene salida a internet. Se comprobó en VM3 con una petición a github.com y dio tiempo agotado con código 000. La solución fue crear una regla de salida en el balanceador llamada SCALABILITY_LAB_OUTBOUND_RULE, con la IP LoadBalancerFrontEnd, protocolo todos, inactividad de 4 minutos, restablecimiento de TCP habilitado, el Backend Pool y 1000 puertos de salida por instancia. Al principio el portal mostró el Backend Pool como incompatible porque VM1 y VM2 todavía tenían IP pública. Cuando se las quitó apareció como compatible. En la segunda captura el campo de puertos por instancia aparece en 0 porque se tomó antes de escribir 1000. Con la regla guardada, la misma petición a github.com respondió con código 200.
+
+![Backend Pool incompatible con la regla de salida](images/part2/solucion/regla_salida_pool_incompatible.png)
+
+![Backend Pool compatible con la regla de salida](images/part2/solucion/regla_salida_pool_compatible.png)
+
+La cuarta máquina, VM4, se creó igual que VM3, sin IP pública.
+
+![VM4 creada](images/part2/solucion/vm4_creada.png)
+
+Instalación de la aplicación. Como las máquinas no tienen IP pública no se usó SSH. La aplicación se instaló desde Azure Cloud Shell con la ejecución remota de comandos de Azure, que corre un script dentro de la máquina. El script está en la carpeta scripts, archivo instalar.sh. Instala Node.js, npm y git, clona el repositorio del enunciado, ejecuta npm install y deja la aplicación como un servicio del sistema llamado fibonacci. Se usó un servicio y no forever porque arranca solo si la máquina se reinicia y no depende de ninguna sesión.
+
+Después de instalar se consultó en cada máquina la respuesta de fibonacci 6 y el nombre del servidor. En VM2 y VM3 también se comprobó que el servicio estuviera activo.
+
+| Máquina | Respuesta de fibonacci 6 | Servidor |
+|---|---|---|
+| VM1 | The answer is 8 | VM1 |
+| VM2 | The answer is 8 | VM2 |
+| VM3 | The answer is 8 | VM3 |
+| VM4 | The answer is 8 | VM4 |
+
 #### Probar el resultado final de nuestra infraestructura
 
 1. Porsupuesto el endpoint de acceso a nuestro sistema será la IP pública del balanceador de carga, primero verifiquemos que los servicios básicos están funcionando, consuma los siguientes recursos:
@@ -385,6 +457,81 @@ newman run ARSW_LOAD-BALANCING_AZURE.postman_collection.json -e [ARSW_LOAD-BALAN
 newman run ARSW_LOAD-BALANCING_AZURE.postman_collection.json -e [ARSW_LOAD-BALANCING_AZURE].postman_environment.json -n 10
 ```
 
+#### Solución de las pruebas del resultado final
+
+Todas las pruebas se hicieron desde Azure Cloud Shell, que es una máquina distinta a las del balanceador, contra la IP pública del balanceador, 57.156.38.94.
+
+Prueba de reparto. La respuesta de la aplicación no dice qué máquina la atendió, así que para ver si el balanceador reparte se mandaron peticiones seguidas y se contó cuántas registró cada máquina, leyendo el registro del servicio fibonacci de cada una antes y después.
+
+Con 3 máquinas se mandaron 30 peticiones.
+
+| Máquina | Peticiones recibidas |
+|---|---|
+| VM1 | 13 |
+| VM2 | 7 |
+| VM3 | 10 |
+
+Con 4 máquinas se mandaron 40 peticiones.
+
+| Máquina | Peticiones recibidas |
+|---|---|
+| VM1 | 11 |
+| VM2 | 8 |
+| VM3 | 15 |
+| VM4 | 6 |
+
+Las sumas dan 30 y 40, así que no se perdió ninguna petición y todas las máquinas recibieron tráfico. El reparto no es igual porque Azure no reparte por turnos, decide con un cálculo hecho con los datos de cada conexión.
+
+Punto 2, informe de newman 1. Se usó la colección de la carpeta part2, la petición GET fibonacci con n igual a 1000000, 10 iteraciones por ejecución y dos ejecuciones en paralelo, con 3 máquinas (VM1, VM2 y VM3).
+
+| Ejecución | Peticiones | Fallidas | Duración total | Tiempo medio | Mínimo y máximo |
+|---|---|---|---|---|---|
+| 1 | 10 | 1 | 1 min 36,2 s | 10,4 s | 8 s y 15,8 s |
+| 2 | 10 | 1 | 1 min 36,2 s | 10,2 s | 8,1 s y 15,7 s |
+
+De las 20 peticiones, 18 respondieron bien y 2 terminaron con el error read ECONNRESET, que significa que la conexión se cerró antes de recibir la respuesta. Para saber si se había caído la aplicación se consultó el contador de reinicios del servicio en las tres máquinas y dio 0, así que ninguna se reinició.
+
+Comparación con el escalamiento vertical de la Parte 1, con los datos de Kaliche. Con dos ejecuciones en paralelo:
+
+| Infraestructura | Duración total | Tiempo medio por petición | Fallos | Costo mensual |
+|---|---|---|---|---|
+| 1 máquina D2as_v4 | 2 min 4 s y 2 min 14 s | 12,3 s y 13,3 s | 0 de 20 | USD 111,69 |
+| 1 máquina D4s_v4 | 2 min 51 s y 2 min 42 s | 17,0 s y 16,1 s | 0 de 20 | USD 223,38 |
+| 3 máquinas DS1_v2 con balanceador | 1 min 36 s en las dos | 10,4 s y 10,2 s | 2 de 20 | USD 293,46 más balanceador e IP |
+
+Las 3 máquinas terminaron más rápido que la máquina grande, pero con 2 peticiones perdidas, mientras que las máquinas verticales no tuvieron ningún fallo. En costos, las 3 máquinas cuestan más al mes (3 por USD 97,82) porque el tamaño B1ls del enunciado no estuvo disponible y DS1_v2 es mucho más caro. Con el balanceador y su IP pública el costo sube un poco más, y esos dos no se midieron.
+
+Punto 3, cuarta máquina y cuatro ejecuciones en paralelo. Se agregó VM4 y se lanzaron 4 ejecuciones de newman al mismo tiempo. Se hicieron dos tandas.
+
+Primera tanda, entre las 05:51 y las 05:53 UTC (00:51 a 00:53 hora de Colombia).
+
+| Ejecución | Peticiones | Fallidas | Duración total | Tiempo medio | Mínimo y máximo |
+|---|---|---|---|---|---|
+| 1 | 10 | 1 | 1 min 41,8 s | 11,7 s | 7,7 s y 23,3 s |
+| 2 | 10 | 2 | 1 min 19,5 s | 8,0 s | 7,7 s y 8,3 s |
+| 3 | 10 | 1 | 1 min 34,2 s | 10,9 s | 7,8 s y 23,3 s |
+| 4 | 10 | 0 | 1 min 37,1 s | 9,6 s | 7,7 s y 23,2 s |
+
+En total fueron 40 peticiones, 36 buenas y 4 fallidas.
+
+Segunda tanda, unos minutos después. La ejecución 4 terminó con sus 10 peticiones buenas, en 1 min 18,7 s y con un tiempo medio de 7,8 s (mínimo 7,7 s y máximo 8 s). Las otras tres ejecuciones también terminaron sin errores, porque el sistema las marcó como terminadas con éxito, pero no se guardó su resumen.
+
+Comparación con la máquina vertical grande con 4 ejecuciones en paralelo, con los datos de Kaliche.
+
+| Infraestructura | Duración total | Tiempo medio por petición | Fallos |
+|---|---|---|---|
+| 1 máquina D4s_v4 | de 4 min 57 s a 5 min 44 s | de 29,6 s a 34,3 s | 0 de 40 |
+| 4 máquinas DS1_v2 con balanceador, primera tanda | de 1 min 19 s a 1 min 42 s | de 8,0 s a 11,7 s | 4 de 40 |
+| 4 máquinas DS1_v2 con balanceador, segunda tanda | 1 min 18,7 s en la ejecución 4 | 7,8 s en la ejecución 4 | 0 en las 4 ejecuciones |
+
+Con 4 máquinas se atendieron las 40 peticiones en unos 106 segundos, contra 5 min 44 s de la máquina vertical, o sea unas 3 veces más rápido. Si se divide el costo por hora entre las peticiones atendidas por hora, el costo por petición baja de unos 0,0007 USD en la máquina vertical grande a unos 0,0004 USD con las 4 máquinas, siempre que estén ocupadas.
+
+Comportamiento de la CPU de las 4 máquinas. No se guardó la gráfica de CPU de Azure Monitor de estas pruebas, así que aquí no hay valores de CPU medidos y no se inventan. Lo que sí se vio en los tiempos es consistente con lo que dice la Parte 1. Cada máquina tiene 1 vCPU y la aplicación usa un solo hilo, así que una sola petición deja el procesador de esa máquina ocupado al 100 por ciento durante unos 8 segundos. Cuando el balanceador manda dos peticiones a la misma máquina, cada una tarda unos 16 segundos, y cuando manda tres tardan unos 23 segundos, que es lo que se ve en los máximos de la primera tanda. Cuando cada máquina recibió una sola petición, como en la segunda tanda, todas tardaron cerca de 8 segundos.
+
+Por qué la tasa de éxito. El enunciado dice que la tasa de éxito aumentó con este estilo de escalabilidad, pero en nuestros datos no fue así. Con 3 máquinas fue de 90 por ciento (18 de 20), con 4 máquinas en la primera tanda también fue de 90 por ciento (36 de 40), y en la segunda tanda no hubo fallos. La máquina vertical de la Parte 1 tampoco tuvo fallos, porque newman espera sin límite de tiempo y el servidor solo pone las peticiones en fila. Lo que sí mejoró con las máquinas en paralelo fue la velocidad y que el sistema ya no depende de una sola máquina ni de una sola zona. La causa de los errores de conexión no se encontró. Se descartó que la aplicación se reiniciara, pero no se midió si el sondeo de estado marcó alguna máquina ocupada como caída ni si fue la red entre Cloud Shell y el balanceador, así que eso queda como posibilidad sin comprobar.
+
+Evaluación del escenario de calidad. El escenario pide que todas las peticiones sean respondidas con la CPU en 70 por ciento o menos. Con el balanceador las peticiones se responden en mucho menos tiempo que con una sola máquina, pero hubo fallos de conexión en dos de las tres tandas, y como no se midió la CPU no se puede comprobar el 70 por ciento. Se puede decir que la escalabilidad horizontal mejora claramente el tiempo de respuesta y la disponibilidad, porque hay máquinas en tres zonas, pero con estos datos no se puede afirmar que el escenario se cumple por completo.
+
 **Preguntas**
 
 * ¿Cuáles son los tipos de balanceadores de carga en Azure y en qué se diferencian?, ¿Qué es SKU, qué tipos hay y en qué se diferencian?, ¿Por qué el balanceador de carga necesita una IP pública?
@@ -397,6 +544,30 @@ newman run ARSW_LOAD-BALANCING_AZURE.postman_collection.json -e [ARSW_LOAD-BALAN
 * Informe de newman 1 (Punto 2)
 * Presente el Diagrama de Despliegue de la solución.
 
+#### Respuestas
 
+Tipos de balanceadores de carga en Azure. Azure Load Balancer trabaja en la capa 4, es decir con TCP y UDP, y reparte conexiones sin mirar el contenido. Puede ser público, con una IP de internet, o interno, con una IP privada. Application Gateway trabaja en la capa 7 con tráfico web, y puede enrutar según la dirección URL, manejar certificados SSL y tener firewall de aplicaciones web. Front Door es un balanceador web global que reparte entre regiones. Traffic Manager reparte usando DNS, es decir que decide a qué dirección apunta un nombre. En este laboratorio se usó Azure Load Balancer público.
 
+SKU. El SKU es el nivel o versión de un recurso, y define sus capacidades y su precio. En el balanceador hay Basic, Standard y Puerta de enlace. Standard maneja zonas de disponibilidad, tiene un acuerdo de disponibilidad, soporta muchas más máquinas y es cerrado por defecto, es decir que no deja pasar tráfico hasta que un grupo de seguridad de red lo permite. Basic es más limitado, no maneja zonas y es abierto por defecto. En el portal que se usó solo aparecían Estándar y Puerta de enlace, que sirve para balancear aparatos de red. Se eligió Estándar, que además es el que permite una IP con redundancia de zona.
 
+Por qué el balanceador necesita una IP pública. Un balanceador público es la puerta de entrada desde internet. Los clientes necesitan una dirección a la cual conectarse, y esa es la IP pública del balanceador. Detrás de ella las máquinas usan direcciones privadas. Si no tuviera IP pública, solo sería accesible desde dentro de la red virtual, que es lo que hace un balanceador interno.
+
+Propósito del Backend Pool. Es la lista de máquinas, o más exactamente de sus tarjetas de red, que reciben el tráfico del balanceador. Agregar una máquina al pool es lo que hace que empiece a recibir peticiones, y sacarla hace que deje de recibirlas. Por eso se puede escalar sin cambiar nada del lado de los clientes.
+
+Propósito del Health Probe. Es la prueba que hace el balanceador para saber si cada máquina está sana. Aquí intenta conectarse al puerto 3000 cada 5 segundos. Si una máquina no responde, el balanceador deja de mandarle peticiones hasta que vuelva a responder. Así se evita enviar clientes a una máquina caída.
+
+Propósito de la Load Balancing Rule. Dice qué tráfico recibe el balanceador, a dónde lo manda y cómo. En este caso, lo que llega al puerto 80 de la IP pública va al puerto 3000 de las máquinas del pool, comprobando la salud con el sondeo. También define la persistencia de sesión.
+
+Tipos de sesión persistente. Hay tres. Ninguna reparte cada conexión usando cinco datos, que son la IP y el puerto de origen, la IP y el puerto de destino y el protocolo. IP de cliente manda al mismo cliente siempre a la misma máquina usando solo su IP. IP de cliente y protocolo hace lo mismo usando la IP y el protocolo. Esto importa cuando la aplicación guarda datos del usuario en la memoria de una máquina, porque si la siguiente petición cae en otra, esos datos no están. Pero afecta la escalabilidad, porque un cliente muy activo queda pegado a una sola máquina y la carga se reparte peor. La aplicación de Fibonacci no guarda nada entre peticiones, así que se dejó en ninguna.
+
+Virtual Network, Subnet y los rangos. Una Virtual Network es una red privada propia dentro de Azure, donde viven las máquinas y se comunican entre sí. Una Subnet es una parte de esa red, y sirve para ordenar y separar recursos. El address space es el bloque grande de direcciones de toda la red, aquí 10.1.0.0/16, que tiene 65.536 direcciones. El address range de la subred es la porción de ese bloque que se le da a esa subred, aquí 10.1.0.0/24, con 256 direcciones, y debe quedar dentro del espacio de la red. Azure se reserva 5 direcciones de cada subred.
+
+Availability Zone. Son centros de datos separados dentro de una misma región, cada uno con su propia energía, refrigeración y red. Se pusieron las máquinas en 3 zonas distintas para que, si falla una zona completa, las otras sigan atendiendo. Una IP con redundancia de zona es una IP que no depende de una sola zona y sigue funcionando aunque una falle. La IP del balanceador se consultó con la línea de comandos y apareció en las zonas 1, 3 y 2.
+
+Propósito del Network Security Group. Es el firewall de la red de Azure. Tiene reglas de entrada y de salida, cada una con una prioridad, un puerto, un protocolo y una acción de permitir o denegar. Por defecto bloquea el tráfico de entrada que no se permita. En el laboratorio se abrió el puerto 22 para SSH y el puerto 3000, que es donde escucha la aplicación, y sin esa segunda regla las peticiones del balanceador no habrían llegado a las máquinas.
+
+Informe de newman 1. Está en la sección de pruebas, en el punto 2, con las tablas de las ejecuciones y la comparación con el escalamiento vertical.
+
+Diagrama de despliegue. Muestra al cliente que llama a la IP pública del balanceador, el balanceador con su regla, su sondeo y su regla de salida, y las cuatro máquinas dentro de la red virtual, con el grupo de seguridad de red que permite los puertos 22 y 3000. Las máquinas salen a internet por la IP del balanceador.
+
+![Diagrama de despliegue](images/part2/solucion/diagrama_despliegue.png)
