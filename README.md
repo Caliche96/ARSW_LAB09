@@ -129,7 +129,7 @@ Antes de continuar puede eliminar el grupo de recursos anterior para evitar gast
 
 Esta parte se hizo desde el portal de Azure, siguiendo las imágenes del enunciado. El portal de hoy no es igual al de 2019, así que donde hubo diferencias las dejamos anotadas.
 
-**Región.** El enunciado usa North Europe, pero la suscripción de estudiante tiene una política que bloquea esa región. Al consultar la política salieron las únicas regiones permitidas: centralus, brazilsouth, mexicocentral, eastus2 y chilecentral. Se escogió East US 2, que tiene zonas de disponibilidad, y todos los recursos de esta parte quedaron ahí. El grupo de recursos SCALABILITY_LAB quedó en North Europe, lo cual no afecta porque los recursos pueden estar en otra región.
+**Región.** Chile Central. North Europe está bloqueada por una política de la suscripción de estudiante. Las regiones permitidas son centralus, brazilsouth, mexicocentral, eastus2 y chilecentral, y en todas el límite es de 6 vCPU por región. En East US 2 la cuota de la familia Dsv7 era 0 y los tamaños de 1 vCPU no estaban disponibles, en Brasil Sur y México pasaba lo mismo con los de 1 vCPU. En Chile Central sí hay una VM de 1 vCPU disponible en las 3 zonas, y con ella caben las 4 máquinas que pide el laboratorio.
 
 **1. Balanceador de carga.** Se creó SCALABILITY_LAB_LOAD_BALANCER, público, SKU Estándar y nivel Regional. En el portal actual la IP pública no se crea aparte: se crea dentro del paso "Configuración de IP de front-end". Allí se dejó una configuración llamada LoadBalancerFrontEnd con una IP nueva, SCALABILITY_LAB_LOAD_BALANCER_IP, estática y con redundancia de zona. La IP pública quedó en 132.196.198.201.
 
